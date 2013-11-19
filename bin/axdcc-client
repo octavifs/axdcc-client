@@ -1,0 +1,128 @@
+#!/usr/bin/env node
+// Most of the code is just a rehash of the axdcc library example:
+// https://github.com/DaVarga/node-axdcc/blob/master/example.js
+
+// Dependencies
+var irc = require('irc');
+var axdcc = require('axdcc');
+var path = require('path');
+// Set CLI options
+var argv = require('optimist')
+  .usage('Download XDCC packet from IRC channel bot.\nUsage $0 [MSG]\n' +
+     'MSG is an IRC command like: /msg\ BOTNAME\ xdcc\ send\ \#PACKAGE.\n' +
+     'Note that it has to be properly escaped.')
+  .alias('c', 'channel')
+  .describe('c', 'IRC Channel')
+  .default('c', 'HorribleSubs')
+  .alias('s', 'server')
+  .default('s', 'irc.rizon.net')
+  .describe('s', 'IRC server')
+  .alias('n', 'nick')
+  .describe('n', 'Log in to channel with nick')
+  .default('n', 'XDCCNodeClient')
+  .alias('d', 'download')
+  .describe('d', 'Download path')
+  .default('d', './')
+  .alias('b', 'bot')
+  .describe('b', 'XDCC bot')
+  .alias('p', 'pack')
+  .describe('p', 'XDCC pack')
+  .alias('h', 'help')
+  .describe('h', 'Display the usage')
+  .string(['c', 's', 'n', 'd', 'b', 'p'])
+  .argv;
+
+
+// If unnamed arguments, parse them
+if (argv._.length) {
+  // This takes the 1st unnamed argument and extracts bot and pack.
+  // It expects a string like this:
+  // /msg\ CR-ARCHIVE\|1080p\ xdcc\ send\ \#2
+  // Note that the string must be escaped for the terminal to detect it as a
+  // sole argument.
+  var args = argv._[0].split(' ');
+  argv.bot = args[1];
+  argv.pack = args[4];
+}
+
+
+if ((!argv.bot || !argv.pack) && !argv.help) {
+  process.stdout.write('Error: Bot or pack missing.\n');
+  process.exit(0);
+}
+
+if (argv.help) {
+  require('optimist').showHelp();
+  process.exit(0);
+}
+
+// Add # if missing
+if (argv.channel[0] !== '#') {
+  argv.channel = '#' + argv.channel;
+}
+
+if (argv.pack[0] !== '#') {
+  argv.pack = '#' + argv.pack;
+}
+
+
+// Set IRC configuration
+var config = {
+  server: argv.server,
+  nick: argv.nick,
+  options: {
+    channels: [argv.channel],
+    userName: argv.nick,
+    realName: argv.nick,
+    debug: false,
+    stripColors: true
+  }
+};
+
+var client = new irc.Client(config.server, config.nick, config.options);
+console.log('-- CONNECTING TO ' + config.server + ' AS ' + config.nick);
+
+// XDCC handlers
+function connect(pack) {
+  console.log('-- BEGINING XDCC OF ' + pack.filename);
+}
+
+function progress(pack, recieved) {
+  var downloaded = Math.floor(recieved / pack.filesize * 100);
+  process.stdout.write('\033[s');
+  process.stdout.write('-- ' + downloaded + '% DONE ' + pack.filename);
+  process.stdout.write('\033[u');
+}
+
+function complete(pack) {
+  console.log('-- COMPLETED XDCC OF ' + pack.filename);
+  process.exit(0);
+}
+
+function error(pack, err) {
+  console.log('-- XDCC ERROR WITH ' + pack.filename + ': ' + JSON.stringify(err));
+  process.exit(1);
+}
+
+client.on('error', function (message) {
+  console.log('-- IRC ERROR: ' + JSON.stringify(message));
+  process.exit(1);
+});
+
+// Create a new Request and attach the event handlers
+// Request pack #1337 from ``XDCC-Bot''
+// Store the file in ``/path/to/Downloads''
+// Resume if the file is existent
+var request = new axdcc.Request(client, {
+  pack: argv.pack,
+  nick: argv.bot,
+  path: path.resolve(argv.download),
+  resume: true
+}).on('dlerror', error).on('connect', connect).on('progress', progress).on('complete', complete);
+
+client.on('join', function (channel, nick) {
+  if (nick === config.nick && channel.toLowerCase() === config.options.channels[0].toLowerCase()) {
+    console.log('-- Joined ' + channel);
+    request.emit('start');
+  }
+});

@@ -1,0 +1,32 @@
+{
+  "name": "axdcc-client",
+  "version": "0.1.0",
+  "description": "XDCC CLI client",
+  "bin": {
+    "axdcc-client": "./bin/axdcc-client"
+  },
+  "dependencies": {
+    "optimist": "~0.6.0",
+    "irc": "~0.3.6",
+    "axdcc": "~0.2.23"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/octavifs/axdcc-client.git"
+  },
+  "keywords": [
+    "xdcc",
+    "cli",
+    "client"
+  ],
+  "author": "Octavi Font",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/octavifs/axdcc-client/issues"
+  },
+  "homepage": "https://github.com/octavifs/axdcc-client"
+}

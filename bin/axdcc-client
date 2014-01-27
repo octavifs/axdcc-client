@@ -90,7 +90,7 @@ function connect(pack) {
 function progress(pack, recieved) {
   var downloaded = Math.floor(recieved / pack.filesize * 100);
   process.stdout.write('\033[s');
-  process.stdout.write('-- ' + downloaded + '% DONE ' + pack.filename);
+  process.stdout.write('-- ' + downloaded + '% DONE ' + pack.filename + '\n');
   process.stdout.write('\033[u');
 }
 
